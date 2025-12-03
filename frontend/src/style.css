@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-judo-blue: #003399;
+  --color-judo-red: #E1000F;
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
+  }
+
+  .glass-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-md;
+  }
+
+  .section-title {
+    @apply text-4xl font-bold text-judo-blue uppercase tracking-wide mb-4;
+  }
+}
