@@ -57,7 +57,30 @@
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-gray-500">Licence</span>
                                 <span class="text-sm font-medium text-gray-900">{{ child.license_number || 'En attente'
-                                    }}</span>
+                                }}</span>
+                            </div>
+                            <!-- Payment Info -->
+                            <div v-if="child.active_registration" class="pt-2 border-t border-gray-100 mt-2">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-sm text-gray-500">Total Cotisation</span>
+                                    <span class="text-sm font-semibold text-gray-900">{{
+                                        child.active_registration.total_to_pay }} €</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-500">Reste à payer</span>
+                                    <span v-if="parseFloat(child.active_registration.remaining_to_pay) > 0"
+                                        class="text-sm font-bold text-red-600">
+                                        {{ child.active_registration.remaining_to_pay }} €
+                                    </span>
+                                    <span v-else
+                                        class="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                        Réglé
+                                    </span>
+                                </div>
+                            </div>
+                            <div v-else class="pt-2 border-t border-gray-100 mt-2 text-center">
+                                <span class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Non inscrit
+                                    cette saison</span>
                             </div>
                             <div class="pt-2 flex justify-end">
                                 <button @click.stop="openEditModal(child)"
@@ -269,6 +292,7 @@ const getStatusVariant = (status) => {
 
 const fetchFamilyData = async () => {
     try {
+        // Récupère toutes les données liées à la famille (enfants, factures, convocs) en un seul appel
         const response = await api.get('/api/my-family/')
         familyData.value = response.data
     } catch (e) {
@@ -283,7 +307,7 @@ const fetchFamilyData = async () => {
 const downloadInvoice = async (invoiceId) => {
     try {
         const response = await api.get(`/api/invoices/${invoiceId}/download/`, {
-            responseType: 'blob'
+            responseType: 'blob' // Indispensable pour traiter le retour binaire (PDF)
         })
 
         const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -302,6 +326,7 @@ const downloadInvoice = async (invoiceId) => {
 
 const payInvoice = async (invoiceId) => {
     try {
+        // Redirection vers Stripe pour le paiement
         const response = await api.post('/api/payments/create-checkout-session/',
             { invoice_id: invoiceId }
         )
