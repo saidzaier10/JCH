@@ -62,5 +62,5 @@ Des scripts sont disponibles via `manage.py` pour initialiser les données ou ef
 
 ---
 
-**© 2024-2025 Said Zaier.** Tous droits réservés.
+**© 2025 Said Zaier.** Tous droits réservés.
 Ce code est la propriété exclusive de Said Zaier. Toute reproduction ou distribution non autorisée est interdite.
