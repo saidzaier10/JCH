@@ -125,7 +125,7 @@ const newEvent = ref({
 const fetchEvents = async () => {
     try {
         const res = await api.get('/api/events/')
-        events.value = res.data
+        events.value = res.data.results || res.data
     } catch (e) {
         console.error(e)
     }

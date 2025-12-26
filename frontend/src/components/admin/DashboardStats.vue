@@ -16,7 +16,8 @@ import {
     Calendar,
     TrendingUp,
     UserCog,
-    Wallet
+    Wallet,
+    ClipboardCheck
 } from 'lucide-vue-next'
 import BaseCard from '../ui/BaseCard.vue'
 
@@ -29,6 +30,10 @@ const props = defineProps({
         default: null
     },
     registrations: {
+        type: Array,
+        default: () => []
+    },
+    events: {
         type: Array,
         default: () => []
     },
@@ -45,8 +50,28 @@ const chartOptions = {
 
 // Computed Data
 const upcomingEventsCount = computed(() => {
-    // Placeholder - will be replaced with real data
-    return 3
+    if (!props.events || props.events.length === 0) return 0
+    const now = new Date()
+    // Calculate events starting in the future
+    return props.events.filter(e => new Date(e.start_time) > now).length
+})
+
+const actionItems = computed(() => {
+    const items = []
+
+    // Unpaid registrations
+    const unpaidCount = props.registrations.filter(r => !r.paid).length
+    if (unpaidCount > 0) {
+        items.push({
+            label: 'Paiements en attente',
+            count: unpaidCount,
+            color: 'text-orange-600',
+            bg: 'bg-orange-100',
+            icon: Wallet
+        })
+    }
+
+    return items
 })
 
 const paymentRate = computed(() => {
@@ -58,8 +83,8 @@ const paymentRate = computed(() => {
 const barChartData = computed(() => {
     if (!props.stats) return null
 
-    const labels = props.stats.registrations_per_category.map(item => item.category__name)
-    const data = props.stats.registrations_per_category.map(item => item.count)
+    const labels = props.stats?.registrations_per_category?.map(item => item.category__name) || []
+    const data = props.stats?.registrations_per_category?.map(item => item.count) || []
 
     return {
         labels,
@@ -74,8 +99,8 @@ const barChartData = computed(() => {
 const pieChartData = computed(() => {
     if (!props.stats) return null
 
-    const labels = props.stats.gender_distribution.map(item => item.gender === 'M' ? 'Masculin' : 'Féminin')
-    const data = props.stats.gender_distribution.map(item => item.count)
+    const labels = props.stats?.gender_distribution?.map(item => item.gender === 'M' ? 'Masculin' : 'Féminin') || []
+    const data = props.stats?.gender_distribution?.map(item => item.count) || []
 
     return {
         labels,
@@ -130,7 +155,7 @@ const recentActivities = computed(() => {
 
         <div v-else>
             <!-- KPI Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <BaseCard class="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
                     <div class="flex justify-between items-start">
                         <div>
@@ -156,7 +181,7 @@ const recentActivities = computed(() => {
                             <p class="text-3xl font-bold text-gray-900 mt-2">{{ upcomingEventsCount }}</p>
                             <div class="flex items-center mt-2">
                                 <Calendar :size="16" class="text-purple-500 mr-1" />
-                                <span class="text-xs text-purple-600 font-medium">à venir ce mois</span>
+                                <span class="text-xs text-purple-600 font-medium">à venir</span>
                             </div>
                         </div>
                         <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -178,6 +203,29 @@ const recentActivities = computed(() => {
                         </div>
                         <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                             <TrendingUp :size="24" class="text-orange-600" />
+                        </div>
+                    </div>
+                </BaseCard>
+
+                <!-- Actions Required Card -->
+                <BaseCard class="border-l-4 border-l-red-500 hover:shadow-lg transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-gray-500 text-sm font-medium uppercase tracking-wider">À Traiter
+                            </h3>
+                            <p class="text-3xl font-bold text-gray-900 mt-2">{{ actionItems.length }}</p>
+                            <div class="flex flex-col mt-2 gap-1">
+                                <span v-for="item in actionItems" :key="item.label" class="text-xs font-medium"
+                                    :class="item.color">
+                                    {{ item.count }} {{ item.label }}
+                                </span>
+                                <span v-if="actionItems.length === 0" class="text-xs text-green-600 font-medium">
+                                    Tout est à jour !
+                                </span>
+                            </div>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                            <ClipboardCheck :size="24" class="text-red-600" />
                         </div>
                     </div>
                 </BaseCard>

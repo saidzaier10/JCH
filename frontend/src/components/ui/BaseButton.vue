@@ -1,9 +1,9 @@
 <template>
     <button :type="type" :class="[
-        'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95',
         variantClasses[variant],
         sizeClasses[size],
-        rounded ? 'rounded-full' : 'rounded-md',
+        rounded ? 'rounded-full' : 'rounded-xl',
         block ? 'w-full' : '',
         customClass
     ]" :disabled="disabled || loading" @click="$emit('click')" :aria-busy="loading">
@@ -70,7 +70,7 @@ const props = defineProps({
 })
 
 const variantClasses = {
-    primary: 'bg-judo-blue hover:bg-judo-blue-light text-white focus:ring-judo-blue shadow-md hover:shadow-lg',
+    primary: 'bg-linear-to-r from-judo-blue to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white focus:ring-judo-blue shadow-lg hover:shadow-xl border border-transparent',
     secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-800 focus:ring-gray-500',
     danger: 'bg-judo-red hover:bg-judo-red-light text-white focus:ring-judo-red shadow-md hover:shadow-lg',
     ghost: 'bg-transparent hover:bg-gray-100 text-gray-600 hover:text-gray-900',

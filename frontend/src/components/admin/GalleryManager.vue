@@ -30,7 +30,7 @@ const fetchPhotos = async () => {
     loadingPhotos.value = true
     try {
         const res = await api.get('/api/gallery/')
-        photos.value = res.data
+        photos.value = res.data.results || res.data
     } catch (e) {
         console.error(e)
         toast.error("Erreur lors du chargement des photos")
@@ -39,10 +39,13 @@ const fetchPhotos = async () => {
     }
 }
 
+const imagePreview = ref(null)
+
 const handleFileChange = (event) => {
     const file = event.target.files[0]
     if (file) {
         photoForm.value.image = file
+        imagePreview.value = URL.createObjectURL(file)
     }
 }
 
@@ -52,6 +55,7 @@ const openUploadModal = () => {
         category: 'EVENT',
         image: null
     }
+    imagePreview.value = null
     showUploadModal.value = true
 }
 
@@ -62,6 +66,7 @@ const uploadPhoto = async () => {
     }
 
     uploadingPhoto.value = true
+    // toast.info("Envoi en cours...") // Optional feedback
     const formData = new FormData()
     formData.append('title', photoForm.value.title)
     formData.append('category', photoForm.value.category)
@@ -173,8 +178,8 @@ onMounted(() => {
                     @click="showUploadModal = false"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
                 <div
-                    class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    class="flex align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100 max-h-[90vh] flex-col">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 overflow-y-auto">
                         <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
                             Ajouter une photo
                         </h3>
@@ -196,17 +201,18 @@ onMounted(() => {
                                 <div
                                     class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-judo-blue transition-colors cursor-pointer relative">
                                     <div class="space-y-1 text-center">
-                                        <ImageIcon v-if="!photoForm.image" class="mx-auto h-12 w-12 text-gray-400" />
-                                        <div v-else
-                                            class="mx-auto h-12 w-12 text-green-500 flex items-center justify-center">
-                                            <CheckCircle :size="32" />
+                                        <div v-if="imagePreview" class="mb-3">
+                                            <img :src="imagePreview" class="mx-auto h-32 object-contain rounded-md" />
                                         </div>
+                                        <ImageIcon v-else class="mx-auto h-12 w-12 text-gray-400" />
+
                                         <div class="flex text-sm text-gray-600 justify-center">
                                             <label for="file-upload"
                                                 class="relative cursor-pointer bg-white rounded-md font-medium text-judo-blue hover:text-blue-500 focus-within:outline-none">
-                                                <span>{{ uploadLabel }}</span>
+                                                <span>{{ imagePreview ? 'Changer l\'image' : 'Télécharger un fichier'
+                                                }}</span>
                                                 <input id="file-upload" name="file-upload" type="file" class="sr-only"
-                                                    @change="handleFileChange" accept="image/*" required />
+                                                    @change="handleFileChange" accept="image/*" />
                                             </label>
                                         </div>
                                         <p class="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 5MB</p>
@@ -215,14 +221,14 @@ onMounted(() => {
                             </div>
 
                             <div
-                                class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 mt-6">
+                                class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-3 space-y-reverse sm:space-y-0 mt-6 sticky bottom-0 bg-white pt-2">
                                 <BaseButton type="button" variant="white" @click="showUploadModal = false"
                                     class="w-full sm:w-auto">
                                     Annuler
                                 </BaseButton>
-                                <BaseButton type="submit" variant="primary" :loading="uploadingPhoto"
-                                    class="w-full sm:w-auto">
-                                    Télécharger
+                                <BaseButton type="button" variant="primary" :loading="uploadingPhoto"
+                                    @click="uploadPhoto" class="w-full sm:w-auto">
+                                    Valider la photo
                                 </BaseButton>
                             </div>
                         </form>

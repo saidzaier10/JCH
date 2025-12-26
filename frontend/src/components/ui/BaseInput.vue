@@ -1,6 +1,7 @@
 <template>
     <div class="w-full">
-        <label v-if="label" :for="id" class="block text-sm font-medium text-gray-700 mb-1">
+        <label v-if="label" :for="id" class="block text-sm font-medium mb-1"
+            :class="variant === 'glass' ? 'text-white' : 'text-gray-700'">
             {{ label }}
         </label>
         <div class="relative rounded-md shadow-sm">
@@ -8,14 +9,19 @@
                 <slot name="prefix"></slot>
             </div>
             <input :id="id" :type="type" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)"
-                :placeholder="placeholder" :disabled="disabled" :required="required" v-bind="$attrs" 
+                :placeholder="placeholder" :disabled="disabled" :required="required" v-bind="$attrs"
                 :aria-invalid="!!error"
                 :aria-describedby="[error ? `${id}-error` : '', hint ? `${id}-hint` : ''].filter(Boolean).join(' ') || undefined"
                 :class="[
-                    'block w-full rounded-lg border-gray-300 bg-white focus:bg-white focus:ring-2 focus:ring-judo-blue focus:border-judo-blue sm:text-sm transition-all duration-200 py-3',
+                    'block w-full rounded-xl transition-all duration-200 py-3 sm:text-sm',
                     $slots.prefix ? 'pl-10' : 'pl-4',
-                    error ? 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500' : '',
-                    disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                    variant === 'glass'
+                        ? 'bg-white/10 border-white/20 text-white placeholder-gray-300 focus:bg-white/20 focus:ring-2 focus:ring-white/50 focus:border-white/30 backdrop-blur-md'
+                        : 'bg-white border-gray-300 text-gray-900 focus:bg-white focus:ring-2 focus:ring-judo-blue focus:border-judo-blue shadow-sm border',
+                    error
+                        ? (variant === 'glass' ? 'border-red-400 focus:ring-red-400 placeholder-red-300' : 'border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500')
+                        : '',
+                    disabled ? 'opacity-60 cursor-not-allowed' : ''
                 ]" />
         </div>
         <p v-if="error" :id="`${id}-error`" class="mt-1 text-sm text-red-600">{{ error }}</p>
@@ -55,6 +61,11 @@ defineProps({
     placeholder: {
         type: String,
         default: ''
+    },
+    variant: {
+        type: String,
+        default: 'default',
+        validator: (value) => ['default', 'glass'].includes(value)
     },
     error: {
         type: String,

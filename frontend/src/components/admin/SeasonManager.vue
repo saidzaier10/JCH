@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Calendar, Plus, Edit, Trash2 } from 'lucide-vue-next'
 import BaseCard from '../ui/BaseCard.vue'
 import BaseButton from '../ui/BaseButton.vue'
@@ -38,10 +38,22 @@ const categoryForm = ref({
 })
 
 // Methods
+const modalTitleCategory = computed(() => {
+    return editingCategory.value
+        ? `Modifier la catégorie : ${editingCategory.value.name}`
+        : 'Nouvelle Catégorie'
+})
+
+const modalTitleSeason = computed(() => {
+    return editingSeason.value
+        ? `Modifier la saison : ${editingSeason.value.name}`
+        : 'Nouvelle Saison'
+})
+
 const fetchSeasons = async () => {
     try {
         const res = await api.get('/api/seasons/')
-        seasons.value = res.data
+        seasons.value = res.data.results || res.data
     } catch (e) {
         console.error(e)
         toast.error("Erreur lors du chargement des saisons")
@@ -51,7 +63,7 @@ const fetchSeasons = async () => {
 const fetchCategories = async () => {
     try {
         const res = await api.get('/api/categories/')
-        categories.value = res.data
+        categories.value = res.data.results || res.data
     } catch (e) {
         console.error(e)
         toast.error("Erreur lors du chargement des catégories")
@@ -60,8 +72,8 @@ const fetchCategories = async () => {
 
 const fetchRegistrations = async () => {
     try {
-        const res = await api.get('/api/registrations/')
-        registrations.value = res.data
+        const res = await api.get('/api/registrations/?all=true')
+        registrations.value = res.data.results || res.data
     } catch (e) {
         console.error(e)
     }
@@ -302,8 +314,8 @@ onMounted(() => {
                 <div
                     class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
-                            {{ editingSeason ? 'Modifier la saison' : 'Nouvelle Saison' }}
+                        <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">
+                            {{ modalTitleSeason }}
                         </h3>
                         <form @submit.prevent="saveSeason" class="space-y-4">
                             <BaseInput label="Nom" v-model="seasonForm.name" required placeholder="Ex: 2023-2024" />
@@ -342,8 +354,8 @@ onMounted(() => {
                 <div
                     class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
-                            {{ editingCategory ? 'Modifier la catégorie' : 'Nouvelle Catégorie' }}
+                        <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">
+                            {{ modalTitleCategory }}
                         </h3>
                         <form @submit.prevent="saveCategory" class="space-y-4">
                             <BaseInput label="Nom" v-model="categoryForm.name" required placeholder="Ex: Poussins" />

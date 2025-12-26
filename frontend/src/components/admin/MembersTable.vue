@@ -13,7 +13,8 @@ import {
     Scale,
     ChevronLeft,
     ChevronRight,
-    Mail
+    Mail,
+    Camera
 } from 'lucide-vue-next'
 import BaseCard from '../ui/BaseCard.vue'
 import BaseButton from '../ui/BaseButton.vue'
@@ -231,6 +232,14 @@ const currentCategoryName = computed(() => {
                             </th>
                             <th scope="col"
                                 class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Discipline / Ceinture
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Infos
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Poids
                             </th>
                             <th scope="col"
@@ -284,6 +293,23 @@ const currentCategoryName = computed(() => {
                                     <AlertCircle :size="16" class="mr-1" /> En attente
                                 </span>
                             </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ member.discipline || '-' }}</div>
+                                <div class="text-xs text-gray-500">{{ member.belt || '-' }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center space-x-2">
+                                    <div v-if="member.image_rights" title="Droit à l'image OK">
+                                        <Camera :size="16" class="text-green-600" />
+                                    </div>
+                                    <div v-else title="Pas de droit à l'image">
+                                        <Camera :size="16" class="text-red-400" />
+                                    </div>
+                                    <div v-if="member.medical_certificate_valid_until" title="Certificat OK">
+                                        <span class="text-xs bg-green-100 text-green-800 px-1 rounded">Cert</span>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                 <span v-if="member.weight_category" class="text-gray-900 font-bold">
                                     {{ member.weight_category }} kg
@@ -317,7 +343,7 @@ const currentCategoryName = computed(() => {
                         <p class="text-sm text-gray-700">
                             Affichage de <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> à
                             <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredMembers.length)
-                                }}</span>
+                            }}</span>
                             sur <span class="font-medium">{{ filteredMembers.length }}</span> résultats
                         </p>
                     </div>
