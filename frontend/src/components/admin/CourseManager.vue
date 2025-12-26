@@ -38,7 +38,7 @@ const fetchCourses = async () => {
     loading.value = true
     try {
         const res = await api.get('/api/courses/')
-        courses.value = res.data
+        courses.value = res.data.results || res.data
     } catch (e) {
         console.error(e)
         toast.error("Erreur lors du chargement des cours")
@@ -168,8 +168,8 @@ onMounted(fetchCourses)
                 <div
                     class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-100">
                     <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
-                            {{ editingCourse ? 'Modifier le cours' : 'Nouveau cours' }}
+                        <h3 class="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">
+                            {{ editingCourse ? `Modifier le cours : ${editingCourse.name}` : 'Nouveau cours' }}
                         </h3>
                         <form @submit.prevent="saveCourse" class="space-y-4">
                             <BaseInput v-model="form.name" label="Nom du cours" placeholder="Ex: Judo Enfant"

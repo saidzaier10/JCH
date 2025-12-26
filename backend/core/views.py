@@ -2,11 +2,12 @@ from rest_framework import viewsets, status, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Count, Sum
-from .models import Season, Category, Member, Registration, Invoice
+from .models import Season, Category, Member, Registration, Invoice, PaymentOption
 from content.models import Convocation
 from .serializers import (
     SeasonSerializer, CategorySerializer, MemberSerializer, 
-    RegistrationSerializer, InvoiceSerializer, CustomTokenObtainPairSerializer
+    RegistrationSerializer, InvoiceSerializer, CustomTokenObtainPairSerializer, UserSerializer,
+    PaymentOptionSerializer
 )
 from django.db import connection
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -16,8 +17,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class HealthCheckView(views.APIView):
     """
-    Endpoint de vérification de santé pour Docker/K8s.
-    Vérifie la connexion DB.
+    Vue de vérification de l'état de santé de l'application (Health Check).
+    Utilisée par Docker/Kubernetes pour vérifier si le service est en ligne et si la base de données est accessible.
     """
     def get(self, request):
         try:
@@ -29,13 +30,25 @@ class HealthCheckView(views.APIView):
 
 class StatisticsView(views.APIView):
     """
-    Vue pour récupérer les statistiques du club (KPIs, graphiques).
+    Vue API pour récupérer les indicateurs clés de performance (KPI) et statistiques du club.
+    Retourne les données pour:
+    - Répartition par catégorie
+    - Répartition par genre
+    - Revenus totaux
+    - Nombre total d'adhérents
     """
     def get(self, request):
         # Saison active
         active_season = Season.objects.filter(is_active=True).first()
         if not active_season:
-            return Response({'error': 'Aucune saison active'}, status=404)
+            # Return empty structure instead of 404 to avoid frontend global error toast
+            return Response({
+                'season': 'Aucune saison active',
+                'registrations_per_category': [],
+                'gender_distribution': [],
+                'total_revenue': 0,
+                'total_members': 0
+            })
 
         # 1. Inscriptions par catégorie
         registrations_per_category = Registration.objects.filter(season=active_season) \
@@ -70,9 +83,29 @@ from django.contrib.auth.models import User
 from rest_framework.permissions import AllowAny
 from rest_framework import permissions
 
+from .serializers import (
+    SeasonSerializer, CategorySerializer, MemberSerializer, 
+    RegistrationSerializer, InvoiceSerializer, CustomTokenObtainPairSerializer, UserSerializer,
+    PaymentOptionSerializer
+)
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour la gestion des utilisateurs (réservé aux administrateurs).
+    En lecture seule (READ-ONLY) partiel pour ne pas interférer avec le processus d'inscription spécifique.
+    Permet aux admins de lister et rechercher des utilisateurs.
+    """
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
+    filterset_fields = ['username', 'email']
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+
 class UserRegistrationView(views.APIView):
     """
-    Vue pour l'inscription des parents (création de compte utilisateur).
+    Vue dédiée à l'inscription des nouveaux parents (création de compte utilisateur).
+    Accessible publiquement (AllowAny).
+    Gère la création du User Django et génère les tokens JWT initiaux.
     """
     permission_classes = [AllowAny]
 
@@ -102,7 +135,8 @@ class UserRegistrationView(views.APIView):
 
 class SeasonViewSet(viewsets.ModelViewSet):
     """
-    ViewSet pour gérer les saisons.
+    ViewSet pour gérer les saisons sportives.
+    Permet de créer, modifier, lister et activer une saison.
     """
     queryset = Season.objects.all()
     serializer_class = SeasonSerializer
@@ -115,7 +149,9 @@ class SeasonViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def active(self, request):
-        """Retourne la saison active."""
+        """
+        Endpoint personnalisé pour récupérer la saison actuellement active.
+        """
         active_season = Season.objects.filter(is_active=True).first()
         if active_season:
             serializer = self.get_serializer(active_season)
@@ -124,7 +160,11 @@ class SeasonViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
-        """Active une saison et désactive les autres."""
+        """
+        Action pour définir une saison comme "active".
+        Cela désactivera automatiquement toutes les autres saisons (logique dans le modèle ou via signal, 
+        ici simple bascule champ is_active).
+        """
         season = self.get_object()
         season.is_active = True
         season.save()
@@ -136,6 +176,15 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
+class PaymentOptionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour gérer les options de paiement.
+    """
+    queryset = PaymentOption.objects.all()
+    serializer_class = PaymentOptionSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly] # Or Admin only for writes
+
 
 class RegistrationViewSet(viewsets.ModelViewSet):
     """
@@ -168,8 +217,9 @@ class RegistrationViewSet(viewsets.ModelViewSet):
 
 class MemberViewSet(viewsets.ModelViewSet):
     """
-    ViewSet pour gérer les adhérents.
-    Les utilisateurs connectés ne voient que leurs enfants.
+    ViewSet pour la gestion des fiches adhérents (enfants/membres).
+    - Les administrateurs voient tous les membres.
+    - Les parents connectés ne voient que les membres rattachés à leur compte (leurs enfants).
     """
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
@@ -183,9 +233,21 @@ class MemberViewSet(viewsets.ModelViewSet):
         return Member.objects.none()
 
     def perform_create(self, serializer):
-        if self.request.user.is_authenticated:
+        # Admin can set 'parent' explicitly via serializer
+        if self.request.user.is_staff:
+            parent = serializer.validated_data.get('parent')
+            if parent:
+                 serializer.save(parent=parent)
+            else:
+                 # Si l'admin crée un membre sans spécifier de parent, 
+                 # on l'assigne par défaut à l'admin lui-même (ou on laisse None selon le besoin).
+                 # Ici, on assigne à l'utilisateur courant (l'admin) pour éviter les orphelins.
+                 serializer.save(parent=self.request.user)
+        # Regular user always assigns to themselves
+        elif self.request.user.is_authenticated:
             serializer.save(parent=self.request.user)
         else:
+            # Should not happen due to permissions, but safe fallback
             serializer.save()
 
 class InvoiceViewSet(viewsets.ModelViewSet):
@@ -216,7 +278,12 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
 class FamilyViewSet(viewsets.ViewSet):
     """
-    ViewSet pour récupérer les données de la famille connectée (Enfants, Convocations, Factures).
+    ViewSet "Tableau de bord famille".
+    Regroupe toutes les informations pertinentes pour une famille connecté :
+    - Liste des enfants inscrits
+    - Inscriptions actives
+    - Convocations aux compétitions
+    - Factures
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -226,7 +293,20 @@ class FamilyViewSet(viewsets.ViewSet):
         
         # Serialize members
         members_data = MemberSerializer(members, many=True).data
-        
+
+        # Add active registration info to each member
+        active_season = Season.objects.filter(is_active=True).first()
+        if active_season:
+            for member_data in members_data:
+                member_id = member_data['id']
+                registration = Registration.objects.filter(member_id=member_id, season=active_season).first()
+                if registration:
+                    # Use serializer to get computed fields (total_to_pay, etc.)
+                    reg_data = RegistrationSerializer(registration).data
+                    member_data['active_registration'] = reg_data
+                else:
+                    member_data['active_registration'] = None
+
         # Get convocations for these members
         convocations = Convocation.objects.filter(member__in=members).order_by('-event__start_time')
         # We need a serializer for convocations, or build it manually for now

@@ -25,7 +25,7 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
-from core.views import SeasonViewSet, CategoryViewSet, RegistrationViewSet, MemberViewSet, InvoiceViewSet, StatisticsView, UserRegistrationView, FamilyViewSet, HealthCheckView, CustomTokenObtainPairView
+from core.views import SeasonViewSet, CategoryViewSet, RegistrationViewSet, MemberViewSet, InvoiceViewSet, StatisticsView, UserRegistrationView, FamilyViewSet, HealthCheckView, CustomTokenObtainPairView, UserViewSet, PaymentOptionViewSet
 from content.views import EventViewSet, GalleryImageViewSet
 from communications.views import SendConvocationView, BulkEmailView
 from attendance.views import CourseViewSet, SessionViewSet
@@ -41,6 +41,8 @@ router.register(r'registrations', RegistrationViewSet)
 router.register(r'my-family', FamilyViewSet, basename='my-family')
 router.register(r'courses', CourseViewSet)
 router.register(r'sessions', SessionViewSet)
+router.register(r'users', UserViewSet)
+router.register(r'payment-options', PaymentOptionViewSet)
 
 # Restrict admin to superusers
 admin.site.has_permission = lambda r: r.user.is_active and r.user.is_superuser
