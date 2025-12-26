@@ -45,3 +45,61 @@ class MemberConstraintTests(TestCase):
         member = Member(first_name="Future", last_name="Man", birth_date=birth)
         with self.assertRaises(ValidationError):
             member.full_clean()
+
+from decimal import Decimal
+from core.models import Registration
+from core.services import PriceCalculator
+from django.contrib.auth.models import User
+
+class PriceCalculatorTest(TestCase):
+    def setUp(self):
+        self.parent = User.objects.create(username='parent', email='parent@test.com')
+        self.season = Season.objects.create(name='2024-2025', start_date='2024-09-01', end_date='2025-06-30', is_active=True)
+        self.category = Category.objects.create(name='Test Cat', code='TEST', price=Decimal('200.00'))
+        
+        self.member = Member.objects.create(
+            first_name='Kid', last_name='Test', birth_date='2010-01-01', 
+            gender='M', parent=self.parent, license_number='12345'
+        )
+
+    def test_standard_price(self):
+        reg = Registration.objects.create(member=self.member, season=self.season, category=self.category)
+        details = PriceCalculator.calculate_price(reg)
+        self.assertEqual(details['final_price'], Decimal('200.00'))
+
+    def test_supplementary_discipline(self):
+        reg = Registration.objects.create(
+            member=self.member, season=self.season, category=self.category,
+            has_supplementary_discipline=True
+        )
+        details = PriceCalculator.calculate_price(reg)
+        # 200 + 40 = 240
+        self.assertEqual(details['final_price'], Decimal('240.00'))
+
+    def test_city_hall_aid(self):
+        reg = Registration.objects.create(
+            member=self.member, season=self.season, category=self.category,
+            city_hall_aid=True, city_hall_aid_amount=Decimal('50.00')
+        )
+        details = PriceCalculator.calculate_price(reg)
+        # 200 - 50 = 150
+        self.assertEqual(details['final_price'], Decimal('150.00'))
+
+    def test_combined_supplement_and_aid(self):
+        reg = Registration.objects.create(
+            member=self.member, season=self.season, category=self.category,
+            has_supplementary_discipline=True,
+            city_hall_aid=True, city_hall_aid_amount=Decimal('50.00')
+        )
+        details = PriceCalculator.calculate_price(reg)
+        # 200 + 40 - 50 = 190
+        self.assertEqual(details['final_price'], Decimal('190.00'))
+
+    def test_manual_discount(self):
+        reg = Registration.objects.create(
+            member=self.member, season=self.season, category=self.category,
+            discount_amount=Decimal('20.00')
+        )
+        details = PriceCalculator.calculate_price(reg)
+        # 200 - 20 = 180
+        self.assertEqual(details['final_price'], Decimal('180.00'))
